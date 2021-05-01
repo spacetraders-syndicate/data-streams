@@ -13,7 +13,7 @@ const apig = new ApiGatewayManagementApiClient({
     endpoint,
 });
 
-function marshall(payload: Record<string, unknown>) {
+function marshall(payload: any) {
     return Buffer.from(JSON.stringify(
         payload
     ))
@@ -119,7 +119,9 @@ exports.handler = async (event: EventBridgeEvent<'reinvokeSelf', {
             const launchedEvents = launchedShips(flightPlans);
             const landedEvents = landedShips(flightPlans);
             const allEvents = [...launchedEvents, ...landedEvents];
-            await sendMessagesToAllConnections(allEvents)
+            if(allEvents.length > 0){
+                await sendMessagesToAllConnections(allEvents)
+            }
         }
 
         flightPlansCache = flightPlans;
@@ -183,22 +185,16 @@ async function getFlightPlans() {
 async function sendMessagesToAllConnections(messages: any[]) {
     const connectionIds = await connections.fetch();
     const connectionMessageBlocks = connectionIds.map((connectionId) => {
-        const messageBlock: Promise<void | PostToConnectionCommandOutput>[] = [];
-        messages.map((flightPlan) => {
-            const command = new PostToConnectionCommand({
-                ConnectionId: connectionId,
-                Data: marshall(flightPlan)
-            })
-            messageBlock.push(apig.send(command).catch(async (e) => {
-                if (e.errorMessage == "GoneException") {
-                    await connections.destroy(connectionId)
-                }
-            }));
+        const command = new PostToConnectionCommand({
+            ConnectionId: connectionId,
+            Data: marshall(messages)
         })
-        return messageBlock
+        return apig.send(command).catch(async (e) => {
+            if (e.errorMessage == "GoneException") {
+                await connections.destroy(connectionId)
+            }
+        });
     })
 
-    await Promise.all(connectionMessageBlocks.map((message) => {
-        return Promise.all(message)
-    }));
+    await Promise.all(connectionMessageBlocks);
 }
