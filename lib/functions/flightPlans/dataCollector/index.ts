@@ -3,7 +3,22 @@ import { connections, configs, ships, users, time, lambda } from '../../utils';
 import { ApiGatewayManagementApiClient, PostToConnectionCommandOutput, PostToConnectionCommand } from "@aws-sdk/client-apigatewaymanagementapi";
 import { FlightPlansApi, Configuration, SystemsApi, System, GameFlightPlan } from "@spacetraders-syndicate/openapi-sdk";
 import { ulid } from 'ulid';
-import { InvokeAsyncRequest } from '@aws-sdk/client-lambda';
+import Axios from 'axios';
+import axiosRetry from 'axios-retry';
+
+const axios = Axios.create();
+axiosRetry(axios, {
+    retries: 10,
+    retryCondition: (e) => {
+        return (
+            axiosRetry.isNetworkOrIdempotentRequestError(e) ||
+            e.response?.status == 429
+        );
+    },
+    retryDelay: (retryCount) => {
+        return axiosRetry.exponentialDelay(retryCount);
+    }
+});
 
 
 const endpoint = process.env.FULLY_QUALIFIED_DOMAIN_NAME ?
@@ -171,7 +186,7 @@ function landedShips(currentFlightPlans: GameFlightPlan[]): ShipFlightPlanEvent[
 async function getFlightPlans() {
     let promises: Promise<GameFlightPlan[]>[] = [];
     promises = promises.concat(configCache!.systems!.symbols.map(async (system) => {
-        const { data: { flightPlans } } = await new FlightPlansApi(configCache.apiConfiguration).listGameSystemFlightPlans({
+        const { data: { flightPlans } } = await new FlightPlansApi(configCache.apiConfiguration, undefined, axios).listGameSystemFlightPlans({
             symbol: system
         });
         return flightPlans;

@@ -60,7 +60,7 @@ export class FlightPlansStream extends cdk.Construct {
         eventBus.grantAllPutEvents(flightPlansDataCollector);
 
         const flightPlansWebSocketApi = new apig.WebSocketApi(this, "FlightPlansAPI", {
-            apiName: "FlightPlansAPI",
+            description: "Flight Plans Data WebSocket API",
             connectRouteOptions: { integration: new integrations.LambdaWebSocketIntegration({ handler: flightPlansConnectionHandler }) },
             disconnectRouteOptions: { integration: new integrations.LambdaWebSocketIntegration({ handler: flightPlansConnectionHandler }) },
             defaultRouteOptions: { integration: new integrations.LambdaWebSocketIntegration({ handler: flightPlansConnectionHandler }) },
