@@ -28,12 +28,11 @@ export class MarketStream extends cdk.Construct {
 
         const marketConnectionHandler = new lambda.NodejsFunction(this, 'MarketConnectionHandler', {
             entry: 'lib/functions/market/connectionHandler/index.ts',
-            timeout: cdk.Duration.seconds(10),
+            timeout: cdk.Duration.seconds(60),
             awsSdkConnectionReuse: true
         });
         marketTable.grantReadWriteData(marketConnectionHandler);
         marketConnectionHandler.addEnvironment('TABLE_NAME', marketTable.tableName);
-
 
         let marketDataCollectors: lambda.NodejsFunction[] = [];
         Object.keys(locations).forEach((locationsToken) => {
@@ -88,6 +87,14 @@ export class MarketStream extends cdk.Construct {
                 ]
             }))
         })
+        marketConnectionHandler.addToRolePolicy(new iam.PolicyStatement({
+            effect: iam.Effect.ALLOW,
+            resources: [`arn:aws:execute-api:*:*:${marketWebSocketApi.apiId}/*`],
+            actions: [
+                'execute-api:ManageConnections'
+            ]
+        }))
+
 
         let apiStageProps: apig.WebSocketStageProps = {
             webSocketApi: marketWebSocketApi,
@@ -133,6 +140,7 @@ export class MarketStream extends cdk.Construct {
             marketDataCollectors.forEach((collector) => {
                 collector.addEnvironment('FULLY_QUALIFIED_DOMAIN_NAME', fullyQualifiedDomainName)
             })
+            marketConnectionHandler.addEnvironment('FULLY_QUALIFIED_DOMAIN_NAME', fullyQualifiedDomainName)
         } else {
             websocketStage = new apig.WebSocketStage(this, 'MarketAPIStageV1', apiStageProps);
 

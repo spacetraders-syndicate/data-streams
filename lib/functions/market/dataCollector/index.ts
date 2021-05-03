@@ -6,6 +6,7 @@ import Axios from 'axios';
 import axiosRetry from 'axios-retry';
 import deepEqual = require("deep-equal");
 import { reinvokeSelf } from '../../utils/lambda';
+import { cache } from '../../utils';
 
 const axios = Axios.create();
 axiosRetry(axios, {
@@ -50,8 +51,12 @@ let marketCache: Market = {};
 
 exports.handler = async (event: EventBridgeEvent<'reinvokeSelf', { marketCache?: Market }>, context: Context) => {
 
+    let forceCacheSync = false;
     if(event.detail.marketCache){
         marketCache = event.detail.marketCache;
+    } else {
+        // rebuild dynamodb
+        forceCacheSync = true;
     }
 
     while (context.getRemainingTimeInMillis() > 5000) {
@@ -69,6 +74,11 @@ exports.handler = async (event: EventBridgeEvent<'reinvokeSelf', { marketCache?:
             marketCache[response.data.location.symbol] = response.data.location;
             if(locationDifferences.length > 0){
                 differences[response.data.location.symbol] = locationDifferences;
+                cache.create(response.data.location.symbol, response.data.location);
+            }
+
+            if(forceCacheSync){
+                cache.create(response.data.location.symbol, response.data.location);
             }
         })
 
