@@ -1,6 +1,6 @@
-import { Context, EventBridgeEvent, ScheduledEvent } from 'aws-lambda';
+import { Context, EventBridgeEvent } from 'aws-lambda';
 import { connections, configs, ships, users, time, lambda } from '../../utils';
-import { ApiGatewayManagementApiClient, PostToConnectionCommandOutput, PostToConnectionCommand } from "@aws-sdk/client-apigatewaymanagementapi";
+import { ApiGatewayManagementApiClient, PostToConnectionCommand } from "@aws-sdk/client-apigatewaymanagementapi";
 import { FlightPlansApi, Configuration, SystemsApi, System, GameFlightPlan } from "@spacetraders-syndicate/openapi-sdk";
 import { ulid } from 'ulid';
 import Axios from 'axios';
@@ -186,7 +186,7 @@ function landedShips(currentFlightPlans: GameFlightPlan[]): ShipFlightPlanEvent[
 async function getFlightPlans() {
     let promises: Promise<GameFlightPlan[]>[] = [];
     promises = promises.concat(configCache!.systems!.symbols.map(async (system) => {
-        const { data: { flightPlans } } = await new FlightPlansApi(configCache.apiConfiguration, undefined, axios).listGameSystemFlightPlans({
+        const { data: { flightPlans } } = await new FlightPlansApi(configCache.apiConfiguration, undefined, axios).listSystemFlightPlans({
             symbol: system
         });
         return flightPlans;

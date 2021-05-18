@@ -7,6 +7,6 @@ export class DataStreamsStack extends cdk.Stack {
     super(scope, id, props);
 
     const flightPlansStream = new FlightPlansStream(this, 'FlightPlansStream');
-    const marketStream = new MarketStream(this, 'MarketStream');
+    // const marketStream = new MarketStream(this, 'MarketStream');
   }
 }
